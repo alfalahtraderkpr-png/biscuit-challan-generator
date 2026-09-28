@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Biscuit Distribution Manager</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,Helvetica,sans-serif;}
+body{background:#f1f5f9;color:#1e293b;padding:20px;}
+.header{background:linear-gradient(135deg,#059669,#10b981);color:#fff;padding:20px 30px;border-radius:10px;margin-bottom:20px;box-shadow:0 4px 6px rgba(0,0,0,.1);}
+.header h1{font-size:22px;margin-bottom:4px;}
+.header p{font-size:13px;opacity:.9;}
+.card{background:#fff;border-radius:10px;padding:20px;margin-bottom:15px;box-shadow:0 2px 4px rgba(0,0,0,.05);border:1px solid #e2e8f0;}
+.card-title{font-size:14px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #e2e8f0;}
+.row{display:flex;gap:15px;flex-wrap:wrap;align-items:flex-end;}
+.col{flex:1;min-width:200px;}
+label{display:block;font-size:12px;font-weight:600;color:#64748b;margin-bottom:5px;}
+input,select{width:100%;height:40px;border:2px solid #e2e8f0;border-radius:6px;padding:0 12px;font-size:14px;background:#fff;}
+input:focus,select:focus{border-color:#059669;outline:none;}
+.btn{height:40px;padding:0 20px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;transition:.2s;}
+.btn-primary{background:#059669;color:#fff;}
+.btn-primary:hover{background:#047857;}
+.btn-secondary{background:#6366f1;color:#fff;}
+.btn-secondary:hover{background:#4f46e5;}
+.btn-outline{background:#fff;border:2px solid #e2e8f0;color:#475569;}
+.btn-outline:hover{border-color:#059669;color:#059669;}
+.upload-area{border:3px dashed #cbd5e1;border-radius:10px;padding:30px;text-align:center;cursor:pointer;transition:.2s;}
+.upload-area:hover{border-color:#059669;background:#f0fdf4;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead th{background:#1e293b;color:#fff;padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;position:sticky;top:0;}
+tbody td{padding:8px 10px;border-bottom:1px solid #e2e8f0;}
+tbody tr:nth-child(even){background:#f8fafc;}
+tbody tr:hover{background:#f0fdf4;}
+.input-sm{height:32px;padding:0 8px;font-size:12px;border:1px solid #e2e8f0;border-radius:4px;width:120px;}
+.tag{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;}
+.tag-male{background:#dbeafe;color:#1e40af;}
+.tag-female{background:#fce7f3;color:#9d174d;}
+.tag-mixed{background:#f1f5f9;color:#475569;}
+.summary-box{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:15px;}
+.stat{background:#1e293b;color:#fff;padding:15px;border-radius:8px;text-align:center;}
+.stat-num{font-size:24px;font-weight:700;}
+.stat-lbl{font-size:10px;text-transform:uppercase;letter-spacing:1px;opacity:.7;margin-top:3px;}
+.markaz-header td{background:#dbeafe!important;font-weight:700;color:#1e40af;}
+.total-row td{background:#fee2e2!important;font-weight:700;color:#991b1b;}
+.print-section{display:none;}
+.empty{text-align:center;padding:40px;color:#94a3b8;font-size:14px;}
+.hint{font-size:11px;color:#94a3b8;margin-top:4px;}
+@media print{body *{visibility:hidden;}.print-section,.print-section *{visibility:visible;}.print-section{display:block!important;position:absolute;left:0;top:0;width:100%;}}
+</style>
+</head>
+<body>
+
+<div class="header no-print">
+<h1>Biscuit Distribution Manager</h1>
+<p>Challan Generate karein - Excel upload -> Markaz select -> Auto-calculate -> Print</p>
+</div>
+
+<!-- Vendor Details Card -->
+<div class="card no-print">
+<div class="card-title">Vendor Details (sab challans pe yehi print hoga)</div>
+<div class="row">
+<div class="col"><label>Vendor Name</label><input type="text" id="vName" value="Pakistan Sweet Mart (Pvt) Ltd." placeholder="Vendor name"></div>
+<div class="col"><label>Vendor Address</label><input type="text" id="vAddr" value="Plot 23, Industrial Estate, Lahore" placeholder="Vendor address"></div>
+<div class="col"><label>Delivered From</label><input type="text" id="vFrom" value="Lahore Warehouse" placeholder="Warehouse location"></div>
+</div>
+<div class="row" style="margin-top:10px;">
+<div class="col"><label>Vendor Phone</label><input type="text" id="vPhone" value="" placeholder="Phone number"></div>
+<div class="col"><label>Vendor NTN</label><input type="text" id="vNtn" value="" placeholder="NTN number"></div>
+<div class="col"><label>Delivery Date</label><input type="date" id="deliveryDate" value=""></div>
+</div>
+<div class="row" style="margin-top:10px;">
+<div class="col"><label>Product Name (print pe)</label><input type="text" id="prodName" value="Fortified Bis Punjab School Meal Prg 50g" placeholder="Product name"></div>
+</div>
+</div>
+
+<!-- Upload Card -->
+<div class="card no-print">
+<div class="card-title">Step 1: Excel File Upload Karein</div>
+<div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+<p style="font-size:16px;font-weight:600;color:#475569;">Click karein ya Excel file drag karein</p>
+<p style="font-size:12px;color:#94a3b8;margin-top:5px;">Columns: Markaz, School Name, EMIS Code, Gender, Enrollment, Address</p>
+<input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none;">
+</div>
+<button class="btn btn-outline" style="margin-top:10px;" onclick="downloadTemplate()">Download Sample Template</button>
+<span id="fileStatus" style="margin-left:15px;font-size:13px;color:#059669;font-weight:600;"></span>
+</div>
+
+<!-- Settings Card -->
+<div class="card no-print" id="settingsCard" style="display:none;">
+<div class="card-title">Step 2: Settings</div>
+<div class="row">
+<div class="col"><label>Markaz Select Karein</label><select id="markazSelect"><option value="">- Select Markaz -</option></select></div>
+<div class="col" style="min-width:150px;"><label>Days of Stock</label><select id="daysSelect"><option value="7">7 days (x1)</option><option value="14" selected>14 days (x2)</option><option value="21">21 days (x3)</option><option value="30">30 days (x4)</option></select></div>
+<div class="col" style="min-width:180px;"><label>Delivery Mode</label><select id="modeSelect"><option value="100" selected>100% Full</option><option value="84">84%</option></select></div>
+<div class="col" style="min-width:150px;"><label>Challan Prefix</label><input type="text" id="prefixInput" value="KPR-CH-2026-"></div>
+</div>
+<div style="margin-top:12px;display:flex;gap:10px;">
+<button class="btn btn-primary" onclick="generateChallans()">Generate Challans</button>
+<button class="btn btn-outline" onclick="selectAllMarkaz()">Select All Markaz</button>
+</div>
+</div>
+
+<div class="summary-box no-print" id="summaryBox" style="display:none;">
+<div class="stat"><div class="stat-num" id="statMarkaz">0</div><div class="stat-lbl">Markaz</div></div>
+<div class="stat"><div class="stat-num" id="statSchools">0</div><div class="stat-lbl">Challans</div></div>
+<div class="stat"><div class="stat-num" id="statStudents">0</div><div class="stat-lbl">Students</div></div>
+<div class="stat"><div class="stat-num" id="statPcs">0</div><div class="stat-lbl">Total PCs</div></div>
+</div>
+
+<div class="card no-print" id="challanCard" style="display:none;">
+<div class="card-title">Step 3: Generated Challans (1 per school)</div>
+<div style="margin-bottom:10px;display:flex;gap:10px;flex-wrap:wrap;">
+<button class="btn btn-secondary" onclick="exportExcel()">Export Excel</button>
+<button class="btn btn-primary" onclick="printChallans()">Print All</button>
+<button class="btn btn-outline" onclick="bulkInvoicePrompt()">Bulk Invoice Paste</button>
+</div>
+<div style="overflow-x:auto;max-height:500px;overflow-y:auto;">
+<table id="challanTable"><thead><tr><th>Challan #</th><th>EMIS</th><th>Markaz</th><th>School Name</th><th>Gender</th><th style="text-align:right;">Students</th><th style="text-align:right;">PCs/Stu</th><th style="text-align:right;">Total PCs</th><th style="text-align:right;">CTNs</th><th style="text-align:right;">Loose</th><th>Invoice #</th></tr></thead><tbody id="challanBody"></tbody></table>
+</div>
+</div>
+
+<div class="print-section" id="printSection"></div>
+
+<script>
+let allData=[];let challans=[];let challanCounter=0;
+const PRODUCT_NAME="Fortified Bis Punjab School Meal Prg 50g";
+
+document.getElementById('fileInput').addEventListener('change',handleFile);
+document.getElementById('uploadArea').addEventListener('dragover',function(e){e.preventDefault();this.style.borderColor='#059669';this.style.background='#f0fdf4';});
+document.getElementById('uploadArea').addEventListener('dragleave',function(e){this.style.borderColor='#cbd5e1';this.style.background='#fff';});
+document.getElementById('uploadArea').addEventListener('drop',function(e){e.preventDefault();this.style.borderColor='#cbd5e1';this.style.background='#fff';if(e.dataTransfer.files[0]){document.getElementById('fileInput').files=e.dataTransfer.files;handleFile({target:{files:[e.dataTransfer.files[0]]}});}});
+
+function handleFile(e){
+const file=e.target.files[0];if(!file)return;
+document.getElementById('fileStatus').textContent='Parsing...';
+const reader=new FileReader();
+reader.onload=function(ev){
+try{
+const data=new Uint8Array(ev.target.result);const wb=XLSX.read(data,{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];const rows=XLSX.utils.sheet_to_json(ws,{header:1});
+const headers=rows[0].map(h=>String(h).toLowerCase().trim());
+let iM=headers.findIndex(h=>h.includes('markaz'));
+let iS=headers.findIndex(h=>h.includes('school')||(h.includes('name')&&!h.includes('markaz')));
+let iE=headers.findIndex(h=>h.includes('emis'));
+let iG=headers.findIndex(h=>h.includes('gender'));
+let iSt=headers.findIndex(h=>h.includes('enroll')||h.includes('student')||h.includes('tadaad'));
+let iA=headers.findIndex(h=>h.includes('address')||h.includes('location'));
+if(iM===-1)iM=0;if(iS===-1)iS=1;if(iE===-1)iE=-1;if(iG===-1)iG=2;if(iSt===-1)iSt=3;if(iA===-1)iA=-1;
+allData=[];
+for(let i=1;i<rows.length;i++){
+const r=rows[i];
+const markaz=r[iM]?String(r[iM]).trim():'';
+const school=r[iS]?String(r[iS]).trim():'';
+if(!markaz&&!school)continue;
+allData.push({
+markaz,school,
+emis:iE>=0?(r[iE]?String(r[iE]).trim():''):'',
+gender:r[iG]?String(r[iG]).trim():'Mixed',
+students:parseInt(r[iSt])||0,
+address:iA>=0?(r[iA]?String(r[iA]).trim():''):''
+});
+}
+const ml=[...new Set(allData.map(d=>d.markaz))];const sel=document.getElementById('markazSelect');sel.innerHTML='<option value="">- Select Markaz -</option>';
+ml.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m+' ('+allData.filter(d=>d.markaz===m).length+' schools)';sel.appendChild(o);});
+document.getElementById('fileStatus').textContent=allData.length+' schools loaded!';document.getElementById('settingsCard').style.display='block';
+}catch(err){document.getElementById('fileStatus').textContent='Error: '+err.message;alert('Parse error: '+err.message);}};
+reader.readAsArrayBuffer(file);}
+
+function selectAllMarkaz(){document.getElementById('markazSelect').value='__ALL__';if(challans.length>0)generateChallans();}
+function pcsPerStudent(d){if(d===7)return 1;if(d===14)return 2;if(d===21)return 3;if(d===30)return 4;return Math.ceil(d/7);}
+
+function generateChallans(){
+if(allData.length===0){alert('Pehle Excel upload karein!');return;}
+const sm=document.getElementById('markazSelect').value;const days=parseInt(document.getElementById('daysSelect').value);const mode=document.getElementById('modeSelect').value;const prefix=document.getElementById('prefixInput').value||'CH-2026-';const pps=pcsPerStudent(days);
+let schools=allData;if(sm&&sm!=='__ALL__')schools=allData.filter(d=>d.markaz===sm);
+challans=[];challanCounter=0;const groups={};schools.forEach(s=>{if(!groups[s.markaz])groups[s.markaz]=[];groups[s.markaz].push(s);});
+Object.keys(groups).sort().forEach(markaz=>{groups[markaz].forEach(s=>{
+challanCounter++;const base=s.students*pps;const totalPcs=mode==='84'?Math.round(base*.84):base;const ctns=Math.floor(totalPcs/96);const loosePcs=totalPcs-(ctns*96);
+challans.push({challanNo:prefix+String(challanCounter).padStart(4,'0'),markaz,school:s.school,emis:s.emis,gender:s.gender,students:s.students,address:s.address,pps,totalPcs,ctns,loosePcs,invoiceNo:'',days,mode});
+});});
+renderTable();updateSummary();}
+
+function renderTable(){
+const tbody=document.getElementById('challanBody');
+if(challans.length===0){tbody.innerHTML='<tr><td colspan="11" class="empty">No challans.</td></tr>';return;}
+let html='';let cm='';let ms=0,mp=0;
+challans.forEach((c,i)=>{
+if(c.markaz!==cm){if(cm!==''){html+='<tr class="total-row"><td colspan="5" style="text-align:right;">Subtotal:</td><td style="text-align:right;">'+ms.toLocaleString()+'</td><td></td><td style="text-align:right;">'+mp.toLocaleString()+'</td><td colspan="3"></td></tr>';}cm=c.markaz;ms=0;mp=0;html+='<tr class="markaz-header"><td colspan="11">[Markaz] '+c.markaz+'</td></tr>';}
+const tc=c.gender==='Male'?'tag-male':c.gender==='Female'?'tag-female':'tag-mixed';
+html+='<tr><td style="font-family:monospace;font-weight:700;font-size:11px;">'+c.challanNo+'</td><td style="font-family:monospace;font-size:11px;">'+(c.emis||'-')+'</td><td style="font-size:11px;">'+c.markaz+'</td><td>'+c.school+'</td><td><span class="tag '+tc+'">'+c.gender+'</span></td><td style="text-align:right;font-family:monospace;">'+c.students+'</td><td style="text-align:right;font-family:monospace;">x'+c.pps+'</td><td style="text-align:right;font-family:monospace;font-weight:700;">'+c.totalPcs.toLocaleString()+'</td><td style="text-align:right;font-family:monospace;font-weight:700;">'+c.ctns+'</td><td style="text-align:right;font-family:monospace;">'+c.loosePcs+'</td><td><input type="text" class="input-sm" placeholder="Invoice #" value="'+c.invoiceNo+'" onchange="updateInvoice('+i+',this.value)"></td></tr>';
+ms+=c.students;mp+=c.totalPcs;});
+html+='<tr class="total-row"><td colspan="5" style="text-align:right;">Subtotal:</td><td style="text-align:right;">'+ms.toLocaleString()+'</td><td></td><td style="text-align:right;">'+mp.toLocaleString()+'</td><td colspan="3"></td></tr>';
+tbody.innerHTML=html;document.getElementById('challanCard').style.display='block';}
+
+function updateInvoice(i,v){if(challans[i])challans[i].invoiceNo=v;}
+function bulkInvoicePrompt(){const t=prompt('Paste all invoice numbers (one per line):');if(!t)return;const lines=t.trim().split('\n');challans.forEach((c,i)=>{if(i<lines.length)c.invoiceNo=lines[i].trim();});renderTable();alert(lines.length+' invoices assigned!');}
+function updateSummary(){const ms=new Set(challans.map(c=>c.markaz));const ts=challans.reduce((s,c)=>s+c.students,0);const tp=challans.reduce((s,c)=>s+c.totalPcs,0);document.getElementById('statMarkaz').textContent=ms.size;document.getElementById('statSchools').textContent=challans.length;document.getElementById('statStudents').textContent=ts.toLocaleString();document.getElementById('statPcs').textContent=tp.toLocaleString();document.getElementById('summaryBox').style.display='grid';}
+
+function exportExcel(){
+if(challans.length===0){alert('Generate challans first!');return;}
+const data=challans.map(c=>({'Challan #':c.challanNo,'EMIS':c.emis,'Markaz':c.markaz,'School':c.school,'Gender':c.gender,'Address':c.address,'Students':c.students,'Days':c.days,'Mode':c.mode==='84'?'84%':'100%','PCs/Stu':c.pps,'Total PCs':c.totalPcs,'CTNs':c.ctns,'Loose':c.loosePcs,'Invoice #':c.invoiceNo}));
+const ws=XLSX.utils.json_to_sheet(data);ws['!cols']=[{wch:18},{wch:12},{wch:20},{wch:25},{wch:8},{wch:20},{wch:8},{wch:6},{wch:6},{wch:8},{wch:10},{wch:6},{wch:8},{wch:18}];
+const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Challans');XLSX.writeFile(wb,'challans-'+new Date().toISOString().slice(0,10)+'.xlsx');}
+
+function downloadTemplate(){
+const h=['Markaz','School Name','EMIS Code','Gender','Enrollment','Address'];const s=[['SADAR KPR-MALE','GPS MC HALQA NO 1','31310077','Male','225','Bagho Bahar Road Khanpur'],['SADAR KPR-MALE','GGPS CHAK NO 90 NP','31310078','Mixed','180','Pull 3 L Khanpur'],['SADAR KPR-FEMALE','GGPS CHAK NO 15/P','31310098','Female','145','Nawan Koat Road']];
+const ws=XLSX.utils.aoa_to_sheet([h,...s]);ws['!cols']=[{wch:20},{wch:25},{wch:12},{wch:8},{wch:12},{wch:25}];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Schools');XLSX.writeFile(wb,'template.xlsx');}
+
+function printChallans(){
+if(challans.length===0){alert('Generate challans first!');return;}
+const vName=document.getElementById('vName').value||'';const vAddr=document.getElementById('vAddr').value||'';const vFrom=document.getElementById('vFrom').value||'';const vPhone=document.getElementById('vPhone').value||'';const vNtn=document.getElementById('vNtn').value||'';const prodName=document.getElementById('prodName').value||PRODUCT_NAME;
+const dateInput=document.getElementById('deliveryDate').value;
+const date=dateInput?new Date(dateInput).toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'}):new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
+let html='<div style="font-family:Arial,Helvetica,sans-serif;color:#000;font-weight:700;">';
+challans.forEach((c,i)=>{
+if(i>0)html+='<div style="page-break-before:always;"></div>';
+// Title
+html+='<div style="text-align:center;padding:8px 0 10px 0;">';
+html+='<div style="font-size:16px;font-weight:800;letter-spacing:.5px;">CHIEF MINISTER PUNJAB&rsquo;S SCHOOL NUTRITION PROGRAM</div>';
+html+='<div style="font-size:18px;font-weight:800;margin-top:3px;">DELIVERY CHALLAN</div>';
+html+='</div>';
+// EMIS Code bar
+html+='<table style="width:100%;border-collapse:collapse;border:1.5px solid #000;margin-bottom:8px;"><tr>';
+html+='<td style="border:1.5px solid #000;padding:5px 8px;font-weight:800;width:15%;background:#f5f5f5;">EMIS Code</td>';
+html+='<td style="border:1.5px solid #000;padding:5px 8px;font-family:monospace;font-weight:800;">'+(c.emis||'&nbsp;')+'</td>';
+html+='</tr></table>';
+// Vendor info
+html+='<div style="font-size:11px;line-height:1.8;margin-bottom:6px;">';
+html+='<div><strong>Vendor Name:</strong> '+vName+'</div>';
+html+='<div><strong>Address:</strong> '+vAddr+'</div>';
+html+='<div><strong>Delivered From:</strong> '+vFrom+'</div>';
+if(vPhone)html+='<div><strong>Phone:</strong> '+vPhone+'</div>';
+if(vNtn)html+='<div><strong>NTN:</strong> '+vNtn+'</div>';
+html+='</div>';
+// Delivery details table
+html+='<table style="width:100%;border-collapse:collapse;border:1.5px solid #000;margin-bottom:8px;">';
+html+='<tr><td style="border:1px solid #000;padding:4px 8px;font-weight:800;width:30%;background:#f5f5f5;">Delivery Challan #</td><td style="border:1px solid #000;padding:4px 8px;font-family:monospace;font-weight:800;">'+c.challanNo+'</td></tr>';
+html+='<tr><td style="border:1px solid #000;padding:4px 8px;font-weight:800;background:#f5f5f5;">Invoice Number</td><td style="border:1px solid #000;padding:4px 8px;font-family:monospace;">'+(c.invoiceNo||'&nbsp;')+'</td></tr>';
+html+='<tr><td style="border:1px solid #000;padding:4px 8px;font-weight:800;background:#f5f5f5;">Delivery Date</td><td style="border:1px solid #000;padding:4px 8px;">'+date+'</td></tr>';
+html+='</table>';
+// Delivered To
+html+='<div style="font-weight:800;font-size:12px;margin-bottom:4px;">Delivered To: (School Name)</div>';
+html+='<table style="width:100%;border-collapse:collapse;border:1.5px solid #000;margin-bottom:8px;">';
+html+='<tr><td style="border:1px solid #000;padding:4px 8px;font-weight:800;width:30%;background:#f5f5f5;">Code:</td><td style="border:1px solid #000;padding:4px 8px;font-family:monospace;">'+(c.emis||'&nbsp;')+'</td></tr>';
+html+='<tr><td style="border:1px solid #000;padding:4px 8px;font-weight:800;background:#f5f5f5;">School Name:</td><td style="border:1px solid #000;padding:4px 8px;font-weight:700;">'+c.school+'</td></tr>';
+html+='<tr><td style="border:1px solid #000;padding:4px 8px;font-weight:800;background:#f5f5f5;">Address:</td><td style="border:1px solid #000;padding:4px 8px;">'+(c.address||'&nbsp;')+'</td></tr>';
+html+='<tr><td style="border:1px solid #000;padding:4px 8px;font-weight:800;background:#f5f5f5;">Markaz Name:</td><td style="border:1px solid #000;padding:4px 8px;">'+c.markaz+'</td></tr>';
+html+='</table>';
+// Items table
+html+='<table style="width:100%;border-collapse:collapse;border:1.5px solid #000;margin-bottom:8px;">';
+html+='<thead><tr style="background:#d9e1f2;">';
+html+='<th style="border:1px solid #000;padding:5px 4px;font-size:10px;width:5%;font-weight:800;">SR No.</th>';
+html+='<th style="border:1px solid #000;padding:5px 4px;font-size:10px;font-weight:800;">ITEM DESCRIPTION</th>';
+html+='<th style="border:1px solid #000;padding:5px 4px;font-size:10px;width:10%;font-weight:800;">QTY (Trays)</th>';
+html+='<th style="border:1px solid #000;padding:5px 4px;font-size:10px;width:10%;font-weight:800;">QTY (Pcs)</th>';
+html+='<th style="border:1px solid #000;padding:5px 4px;font-size:10px;width:10%;font-weight:800;">Total Pcs</th>';
+html+='</tr></thead><tbody>';
+html+='<tr>';
+html+='<td style="border:1px solid #000;padding:4px;text-align:center;">1</td>';
+html+='<td style="border:1px solid #000;padding:4px;">'+prodName+' ('+c.days+' days stock, x'+c.pps+' pc/student, '+c.students+' students, '+c.gender+')</td>';
+html+='<td style="border:1px solid #000;padding:4px;text-align:center;font-family:monospace;font-weight:800;">'+c.ctns+'</td>';
+html+='<td style="border:1px solid #000;padding:4px;text-align:center;font-family:monospace;">'+c.loosePcs+'</td>';
+html+='<td style="border:1px solid #000;padding:4px;text-align:center;font-family:monospace;font-weight:800;">'+c.totalPcs.toLocaleString()+'</td>';
+html+='</tr>';
+html+='</tbody>';
+html+='<tfoot><tr style="background:#fee2e7;font-weight:800;color:#7f1d1d;">';
+html+='<td colspan="4" style="border:1px solid #000;padding:5px;text-align:right;font-size:11px;">TOTAL:</td>';
+html+='<td style="border:1px solid #000;padding:5px;text-align:center;font-family:monospace;font-size:12px;">'+c.totalPcs.toLocaleString()+'</td>';
+html+='</tr></tfoot>';
+html+='</table>';
+// Authorization table
+html+='<table style="width:100%;border-collapse:collapse;border:1.5px solid #000;margin-top:10px;">';
+html+='<tr><th style="border:1px solid #000;padding:6px;text-align:center;width:33.3%;background:#f5f5f5;">Received By:</th><th style="border:1px solid #000;padding:6px;text-align:center;width:33.3%;background:#f5f5f5;">Verified By:</th><th style="border:1px solid #000;padding:6px;text-align:center;width:33.3%;background:#f5f5f5;">Verified By:</th></tr>';
+html+='<tr><td style="border:1px solid #000;padding:6px;text-align:center;font-weight:800;">Headmaster / Head Mistress</td><td style="border:1px solid #000;padding:6px;text-align:center;font-weight:800;">A.E.O</td><td style="border:1px solid #000;padding:6px;text-align:center;font-weight:800;">D.D.E.O</td></tr>';
+html+='<tr><td style="border:1px solid #000;padding:6px;">Name: ____________________</td><td style="border:1px solid #000;padding:6px;">Name: ____________________</td><td style="border:1px solid #000;padding:6px;">Name: ____________________</td></tr>';
+html+='<tr><td style="border:1px solid #000;padding:6px;">Signature: ________________</td><td style="border:1px solid #000;padding:6px;">Signature: ________________</td><td style="border:1px solid #000;padding:6px;">Signature: ________________</td></tr>';
+html+='<tr><td style="border:1px solid #000;padding:6px;min-height:70px;height:70px;vertical-align:top;">Stamp:</td><td style="border:1px solid #000;padding:6px;min-height:70px;height:70px;vertical-align:top;">Stamp:</td><td style="border:1px solid #000;padding:6px;min-height:70px;height:70px;vertical-align:top;">Stamp:</td></tr>';
+html+='<tr><td style="border:1px solid #000;padding:6px;">Date: ___________________</td><td style="border:1px solid #000;padding:6px;">Date: ___________________</td><td style="border:1px solid #000;padding:6px;">Date: ___________________</td></tr>';
+html+='</table>';
+// Delivered By footer
+html+='<div style="margin-top:10px;font-size:12px;"><strong>Delivered By:</strong><div style="margin-top:4px;">Delivery Person Name: ____________________________</div></div>';
+});
+html+='</div>';
+document.getElementById('printSection').innerHTML=html;
+window.print();}
+
+window.addEventListener('beforeunload',function(){if(challans.length>0)localStorage.setItem('biscuit_challans',JSON.stringify(challans));});
+window.addEventListener('load',function(){const s=localStorage.getItem('biscuit_challans');if(s){try{challans=JSON.parse(s);if(challans.length>0){renderTable();updateSummary();}}catch(e){}}});
+</script>
+</body>
+</html>
